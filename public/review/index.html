@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Share Your Experience — RJ Holidays</title>
+<style>
+  :root { --teal: #0f4c5c; --teal-deep: #0a3540; --gold: #c98a2c; --paper: #f7f4ee; --line: #dcd5c6; --muted: #6b6459; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--paper); color: #142b2e; }
+  .ridge { height: 6px; background: linear-gradient(90deg, var(--teal) 0%, var(--gold) 50%, var(--teal) 100%); }
+  header { background: var(--teal-deep); color: #f2ede0; padding: 30px 24px; text-align: center; }
+  header .brand { letter-spacing: 0.12em; font-size: 12px; text-transform: uppercase; color: var(--gold); }
+  header h1 { margin: 6px 0 0; font-weight: 400; font-size: 22px; }
+  main { max-width: 480px; margin: 0 auto; padding: 30px 20px 60px; }
+  .card { background: #fff; border: 1px solid var(--line); padding: 26px; border-radius: 2px; text-align: center; }
+  .stars { font-size: 34px; letter-spacing: 6px; cursor: pointer; margin: 14px 0; }
+  .stars span { color: #ddd; }
+  .stars span.filled { color: var(--gold); }
+  textarea { width: 100%; padding: 10px; border: 1px solid var(--line); font-size: 14px; font-family: inherit; margin-top: 12px; }
+  button { background: var(--gold); color: #241a06; border: none; padding: 12px 20px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; font-weight: 700; width: 100%; margin-top: 14px; }
+  .msg { font-size: 13px; color: var(--muted); margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="ridge"></div>
+<header>
+  <div class="brand">RJ Holidays</div>
+  <h1>Share Your Experience</h1>
+</header>
+<main>
+  <div class="card" id="card">
+    <p>How was your trip with us?</p>
+    <div class="stars" id="stars">
+      <span data-v="1">&#9733;</span><span data-v="2">&#9733;</span><span data-v="3">&#9733;</span><span data-v="4">&#9733;</span><span data-v="5">&#9733;</span>
+    </div>
+    <textarea id="reviewText" rows="4" placeholder="Tell us about your trip (optional)"></textarea>
+    <button onclick="submitReview()">Submit Review</button>
+    <div class="msg" id="msg"></div>
+  </div>
+</main>
+<script>
+  const API_BASE = window.RJ_API_BASE || 'https://YOUR-BACKEND.onrender.com';
+  const token = window.location.pathname.split('/').filter(Boolean).pop();
+  let rating = 0;
+
+  document.querySelectorAll('#stars span').forEach(star => {
+    star.addEventListener('click', () => {
+      rating = Number(star.dataset.v);
+      document.querySelectorAll('#stars span').forEach(s => s.classList.toggle('filled', Number(s.dataset.v) <= rating));
+    });
+  });
+
+  async function checkStatus() {
+    try {
+      const res = await fetch(`${API_BASE}/api/reviews/public/${token}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      if (data.already_submitted) {
+        document.getElementById('card').innerHTML = '<p>You\'ve already shared your review for this trip. Thank you!</p>';
+      }
+    } catch (err) {
+      document.getElementById('card').innerHTML = `<p>${err.message}</p>`;
+    }
+  }
+
+  async function submitReview() {
+    const msg = document.getElementById('msg');
+    if (!rating) { msg.textContent = 'Please select a star rating.'; return; }
+    try {
+      const res = await fetch(`${API_BASE}/api/reviews/public/${token}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating, review_text: document.getElementById('reviewText').value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      document.getElementById('card').innerHTML = '<p>Thank you for your feedback! We loved having you travel with RJ Holidays.</p>';
+    } catch (err) {
+      msg.textContent = err.message;
+    }
+  }
+
+  checkStatus();
+</script>
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Your Travel Quotation — RJ Holidays</title>
+<style>
+  :root {
+    --ink: #142b2e;
+    --teal: #0f4c5c;
+    --teal-deep: #0a3540;
+    --gold: #c98a2c;
+    --paper: #f7f4ee;
+    --line: #dcd5c6;
+    --muted: #6b6459;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Georgia', 'Iowan Old Style', serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+  }
+  .ridge {
+    height: 6px;
+    background: linear-gradient(90deg, var(--teal) 0%, var(--gold) 50%, var(--teal) 100%);
+  }
+  header.hero {
+    background: var(--teal-deep);
+    color: #f2ede0;
+    padding: 40px 24px 56px;
+    text-align: center;
+  }
+  header.hero .brand {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    letter-spacing: 0.12em;
+    font-size: 13px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+  header.hero h1 {
+    margin: 0;
+    font-size: clamp(26px, 5vw, 38px);
+    font-weight: 400;
+  }
+  header.hero .code {
+    margin-top: 8px;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    color: #cdd9d4;
+    letter-spacing: 0.05em;
+  }
+  main {
+    max-width: 720px;
+    margin: -30px auto 60px;
+    padding: 0 20px;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 28px 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 12px 30px -18px rgba(15, 76, 92, 0.35);
+  }
+  .card h2 {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--teal);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 10px;
+    margin: 0 0 14px;
+  }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 15px; }
+  .row .label { color: var(--muted); }
+  .row .value { font-weight: 600; text-align: right; }
+  .trail { position: relative; padding-left: 26px; }
+  .trail::before {
+    content: '';
+    position: absolute; left: 8px; top: 6px; bottom: 6px; width: 2px;
+    background: repeating-linear-gradient(to bottom, var(--gold) 0 6px, transparent 6px 12px);
+  }
+  .day { position: relative; margin-bottom: 16px; }
+  .day::before {
+    content: '';
+    position: absolute; left: -22px; top: 4px; width: 10px; height: 10px;
+    border-radius: 50%; background: var(--gold);
+  }
+  .day .d-title { font-weight: 700; margin-bottom: 2px; }
+  .day .d-desc { color: var(--muted); font-size: 14px; }
+  .total-box {
+    background: var(--teal-deep); color: #f2ede0;
+    border-radius: 2px; padding: 24px; text-align: center;
+  }
+  .total-box .amount { font-size: 34px; color: #fff; margin: 4px 0 2px; font-weight: 400; }
+  .total-box .sub { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); }
+  .split { display: flex; gap: 14px; margin-top: 18px; }
+  .split div { flex: 1; background: rgba(255,255,255,0.06); border-radius: 2px; padding: 12px; }
+  .split .amt { font-size: 18px; font-weight: 700; }
+  .split .lbl { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #cdd9d4; }
+  button.accept {
+    width: 100%; margin-top: 16px; padding: 15px;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase;
+    background: var(--gold); color: #241a06; border: none; border-radius: 2px;
+    cursor: pointer; font-weight: 700;
+  }
+  button.accept:hover { background: #b67c22; }
+  button.accept:disabled { background: #b7ae9a; cursor: default; }
+  .status-banner {
+    text-align: center; font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px; letter-spacing: 0.05em; padding: 12px; border-radius: 2px; margin-bottom: 20px;
+  }
+  .status-accepted { background: #e4f2e6; color: #1f6b34; }
+  .status-expired { background: #f7e4e0; color: #a03a26; }
+  .muted-text { color: var(--muted); font-size: 14px; }
+  #loading, #error { text-align: center; padding: 60px 20px; color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="ridge"></div>
+  <div id="loading">Loading your quotation…</div>
+  <div id="error" style="display:none;"></div>
+
+  <div id="content" style="display:none;">
+    <header class="hero">
+      <div class="brand">RJ Holidays</div>
+      <h1 id="destinationTitle">Your Travel Quotation</h1>
+      <div class="code" id="quoteCode"></div>
+    </header>
+
+    <main>
+      <div id="statusBanner"></div>
+
+      <div class="card">
+        <h2>Trip Details</h2>
+        <div class="row"><span class="label">Traveller</span><span class="value" id="custName"></span></div>
+        <div class="row"><span class="label">Travel Date</span><span class="value" id="travelDate"></span></div>
+        <div class="row"><span class="label">Return Date</span><span class="value" id="returnDate"></span></div>
+        <div class="row"><span class="label">Travellers</span><span class="value" id="travellers"></span></div>
+        <div class="row"><span class="label">Hotel Category</span><span class="value" id="hotelCat"></span></div>
+        <div class="row"><span class="label">Vehicle</span><span class="value" id="vehicle"></span></div>
+      </div>
+
+      <div class="card" id="itineraryCard" style="display:none;">
+        <h2>Day-wise Itinerary</h2>
+        <div class="trail" id="itineraryList"></div>
+      </div>
+
+      <div class="card" id="inclusionsCard" style="display:none;">
+        <h2>Inclusions</h2>
+        <p class="muted-text" id="inclusionsText"></p>
+      </div>
+
+      <div class="card" id="exclusionsCard" style="display:none;">
+        <h2>Exclusions</h2>
+        <p class="muted-text" id="exclusionsText"></p>
+      </div>
+
+      <div class="card total-box">
+        <div class="sub">Total Package Price</div>
+        <div class="amount" id="totalAmount"></div>
+        <div class="split">
+          <div><div class="amt" id="advanceAmount"></div><div class="lbl">Advance</div></div>
+          <div><div class="amt" id="balanceAmount"></div><div class="lbl">Balance</div></div>
+        </div>
+        <button class="accept" id="acceptBtn">Accept This Quote</button>
+        <p class="muted-text" style="color:#cdd9d4; margin-top:10px; font-size:12px;" id="validityNote"></p>
+      </div>
+
+      <div class="card" id="policyCard" style="display:none;">
+        <h2>Cancellation Policy & Terms</h2>
+        <p class="muted-text" id="policyText"></p>
+      </div>
+    </main>
+  </div>
+
+<script>
+  // Set this to your deployed backend URL, e.g. https://rj-holidays-backend.onrender.com
+  const API_BASE = window.RJ_API_BASE || 'https://YOUR-BACKEND.onrender.com';
+
+  const token = window.location.pathname.split('/').filter(Boolean).pop();
+
+  async function loadQuote() {
+    try {
+      const res = await fetch(`${API_BASE}/api/quotes/public/${token}`);
+      if (!res.ok) throw new Error('Quote not found');
+      const q = await res.json();
+      render(q);
+    } catch (err) {
+      document.getElementById('loading').style.display = 'none';
+      const el = document.getElementById('error');
+      el.style.display = 'block';
+      el.textContent = "We couldn't find this quotation. Please check the link or contact RJ Holidays.";
+    }
+  }
+
+  function fmt(n) { return 'Rs. ' + Number(n || 0).toLocaleString('en-IN'); }
+
+  function render(q) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+    document.getElementById('destinationTitle').textContent = q.package?.destination
+      ? `${q.package.destination} Trip Quotation`
+      : 'Your Travel Quotation';
+    document.getElementById('quoteCode').textContent = q.quote_code;
+    document.getElementById('custName').textContent = q.customer?.name || '-';
+    document.getElementById('travelDate').textContent = q.travel_date || '-';
+    document.getElementById('returnDate').textContent = q.return_date || '-';
+    document.getElementById('travellers').textContent = `${q.adults} adults, ${q.children} children`;
+    document.getElementById('hotelCat').textContent = q.hotel_category || '-';
+    document.getElementById('vehicle').textContent = q.vehicle_type || '-';
+
+    if (q.itinerary && q.itinerary.length) {
+      document.getElementById('itineraryCard').style.display = 'block';
+      const list = document.getElementById('itineraryList');
+      q.itinerary.forEach(day => {
+        const div = document.createElement('div');
+        div.className = 'day';
+        div.innerHTML = `<div class="d-title">Day ${day.day}${day.title ? ': ' + day.title : ''}</div><div class="d-desc">${day.description || ''}</div>`;
+        list.appendChild(div);
+      });
+    }
+
+    if (q.inclusions) {
+      document.getElementById('inclusionsCard').style.display = 'block';
+      document.getElementById('inclusionsText').textContent = q.inclusions;
+    }
+    if (q.exclusions) {
+      document.getElementById('exclusionsCard').style.display = 'block';
+      document.getElementById('exclusionsText').textContent = q.exclusions;
+    }
+    if (q.cancellation_policy || q.terms_and_conditions) {
+      document.getElementById('policyCard').style.display = 'block';
+      document.getElementById('policyText').textContent = [q.cancellation_policy, q.terms_and_conditions].filter(Boolean).join('\n\n');
+    }
+
+    document.getElementById('totalAmount').textContent = fmt(q.total_amount);
+    document.getElementById('advanceAmount').textContent = fmt(q.advance_amount);
+    document.getElementById('balanceAmount').textContent = fmt(q.balance_amount);
+    document.getElementById('validityNote').textContent = q.validity_date ? `Valid until ${q.validity_date}` : '';
+
+    const btn = document.getElementById('acceptBtn');
+    const banner = document.getElementById('statusBanner');
+
+    if (q.status === 'Accepted') {
+      banner.innerHTML = '<div class="status-banner status-accepted">You have accepted this quotation. Our team will be in touch to confirm your booking.</div>';
+      btn.disabled = true;
+      btn.textContent = 'Quote Accepted';
+    } else if (q.status === 'Expired') {
+      banner.innerHTML = '<div class="status-banner status-expired">This quotation has expired. Please contact RJ Holidays for an updated quote.</div>';
+      btn.disabled = true;
+      btn.textContent = 'Quote Expired';
+    } else {
+      btn.addEventListener('click', () => acceptQuote(btn));
+    }
+  }
+
+  async function acceptQuote(btn) {
+    btn.disabled = true;
+    btn.textContent = 'Accepting…';
+    try {
+      const res = await fetch(`${API_BASE}/api/quotes/public/${token}/accept`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed');
+      btn.textContent = 'Quote Accepted';
+      document.getElementById('statusBanner').innerHTML =
+        '<div class="status-banner status-accepted">Thank you! Your quote has been accepted. Our team will reach out shortly to confirm your booking.</div>';
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Accept This Quote';
+      alert('Something went wrong. Please try again or contact us on WhatsApp.');
+    }
+  }
+
+  loadQuote();
+</script>
+</body>
+</html>

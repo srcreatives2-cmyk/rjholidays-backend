@@ -24,6 +24,7 @@ const allowedOrigins = new Set([
   process.env.FRONTEND_ORIGIN,
   'https://rjholidays.online',
   'https://www.rjholidays.online',
+  'https://rjholidays-backend.onrender.com',
   'http://localhost:3000',
   'http://127.0.0.1:5500',
 ].filter(Boolean));
@@ -31,7 +32,10 @@ const allowedOrigins = new Set([
 app.use(cors({
   origin(origin, callback) {
     // Allow server-to-server requests and tools such as curl/Postman that do not send Origin.
-    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    if (!origin || allowedOrigins.has(origin)) {
+      return callback(null, true);
+    }
+
     return callback(new Error(`CORS blocked origin: ${origin}`));
   },
 }));

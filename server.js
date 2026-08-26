@@ -20,11 +20,23 @@ const reviewRoutes = require('./routes/reviews');
 
 const app = express();
 
+const allowedOrigins = new Set([
+  process.env.FRONTEND_ORIGIN,
+  'https://rjholidays.online',
+  'https://www.rjholidays.online',
+  'http://localhost:3000',
+  'http://127.0.0.1:5500',
+].filter(Boolean));
+
 app.use(cors({
-  origin: [process.env.FRONTEND_ORIGIN, 'http://localhost:3000', 'http://127.0.0.1:5500'].filter(Boolean),
+  origin(origin, callback) {
+    // Allow server-to-server requests and tools such as curl/Postman that do not send Origin.
+    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    return callback(new Error(`CORS blocked origin: ${origin}`));
+  },
 }));
 
-// The Razorpay webhook needs the raw, unparsed body to verify the signature —
+// The Razorpay webhook needs the raw, unparsed body to verify the signature â
 // this must be registered BEFORE express.json(), and only for this one route.
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
@@ -67,7 +79,7 @@ app.use('/api/reviews', reviewRoutes);
 
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 
-// Central error handler — never leak stack traces to the client
+// Central error handler â never leak stack traces to the client
 app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });

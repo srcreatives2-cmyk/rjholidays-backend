@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Booking — RJ Holidays</title>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<style>
+  :root {
+    --ink: #142b2e; --teal: #0f4c5c; --teal-deep: #0a3540; --gold: #c98a2c;
+    --paper: #f7f4ee; --line: #dcd5c6; --muted: #6b6459; --ok: #1f6b34;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--paper); color: var(--ink); }
+  .ridge { height: 6px; background: linear-gradient(90deg, var(--teal) 0%, var(--gold) 50%, var(--teal) 100%); }
+  header { background: var(--teal-deep); color: #f2ede0; padding: 30px 24px; text-align: center; }
+  header .brand { letter-spacing: 0.12em; font-size: 12px; text-transform: uppercase; color: var(--gold); }
+  header h1 { margin: 6px 0 0; font-weight: 400; font-size: 22px; }
+  main { max-width: 640px; margin: 0 auto; padding: 30px 20px 60px; }
+  .card { background: #fff; border: 1px solid var(--line); padding: 24px; margin-bottom: 16px; border-radius: 2px; }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--teal); margin: 0 0 12px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .field input { width: 100%; padding: 10px; border: 1px solid var(--line); font-size: 14px; }
+  button { background: var(--gold); color: #241a06; border: none; padding: 12px 20px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; font-weight: 700; width: 100%; }
+  .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+  .row .label { color: var(--muted); }
+  .badge { padding: 3px 8px; border-radius: 2px; font-size: 11px; text-transform: uppercase; background: #e4f2e6; color: var(--ok); }
+  .msg { font-size: 13px; color: var(--muted); margin-top: 10px; text-align: center; }
+  .booking-item { padding: 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .booking-item:hover { background: #fbfaf6; }
+  a.doc-link { display: inline-block; margin: 4px 8px 4px 0; font-size: 12px; color: var(--teal); }
+</style>
+</head>
+<body>
+<div class="ridge"></div>
+<header>
+  <div class="brand">RJ Holidays</div>
+  <h1>My Booking</h1>
+</header>
+<main>
+  <div id="loginCard" class="card">
+    <h2>Log In</h2>
+    <div id="requestForm">
+      <div class="field"><label>Mobile Number</label><input type="tel" id="phone" placeholder="Your registered phone number" /></div>
+      <div class="field"><label>Email</label><input type="email" id="email" placeholder="Your registered email" /></div>
+      <button onclick="requestLink()">Send Me a Login Link</button>
+      <div class="msg" id="requestMsg"></div>
+    </div>
+  </div>
+
+  <div id="bookingsCard" class="card" style="display:none;">
+    <h2>Your Bookings</h2>
+    <div id="bookingsList"></div>
+  </div>
+
+  <div id="detailCard" class="card" style="display:none;">
+    <h2 id="detailTitle">Booking Detail</h2>
+    <div id="detailBody"></div>
+    <button style="margin-top:14px;" onclick="backToList()">&larr; Back to Bookings</button>
+  </div>
+</main>
+
+<script>
+  const API_BASE = window.RJ_API_BASE || 'https://YOUR-BACKEND.onrender.com';
+  let sessionToken = localStorage.getItem('rj_customer_token') || null;
+
+  async function requestLink() {
+    const phone = document.getElementById('phone').value;
+    const email = document.getElementById('email').value;
+    const msg = document.getElementById('requestMsg');
+    if (!phone || !email) { msg.textContent = 'Please enter both phone and email.'; return; }
+    msg.textContent = 'Sending…';
+    try {
+      const res = await fetch(`${API_BASE}/api/customer/request-link`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, email }),
+      });
+      const data = await res.json();
+      msg.textContent = data.message || 'If we found a matching booking, a login link has been emailed to you.';
+    } catch (err) {
+      msg.textContent = 'Something went wrong. Please try again.';
+    }
+  }
+
+  async function verifyToken(token) {
+    try {
+      const res = await fetch(`${API_BASE}/api/customer/verify/${token}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      sessionToken = data.session_token;
+      localStorage.setItem('rj_customer_token', sessionToken);
+      window.history.replaceState({}, '', '/customer');
+      showBookings();
+    } catch (err) {
+      document.getElementById('requestMsg').textContent = err.message;
+    }
+  }
+
+  async function showBookings() {
+    document.getElementById('loginCard').style.display = 'none';
+    document.getElementById('bookingsCard').style.display = 'block';
+    const res = await fetch(`${API_BASE}/api/customer/my-bookings`, { headers: { Authorization: `Bearer ${sessionToken}` } });
+    if (res.status === 401) { localStorage.removeItem('rj_customer_token'); sessionToken = null; location.reload(); return; }
+    const bookings = await res.json();
+    const list = document.getElementById('bookingsList');
+    list.innerHTML = bookings.map(b => `
+      <div class="booking-item" onclick="showDetail('${b.id}')">
+        <strong>${b.booking_code}</strong> — ${b.travel_date || ''}
+        <span class="badge" style="float:right;">${b.booking_status}</span>
+      </div>
+    `).join('') || '<p class="msg">No bookings found yet.</p>';
+  }
+
+  async function showDetail(id) {
+    const res = await fetch(`${API_BASE}/api/customer/bookings/${id}`, { headers: { Authorization: `Bearer ${sessionToken}` } });
+    const b = await res.json();
+    document.getElementById('bookingsCard').style.display = 'none';
+    document.getElementById('detailCard').style.display = 'block';
+    document.getElementById('detailTitle').textContent = b.booking_code;
+
+    const itineraryHtml = (b.itinerary || []).map(d => `<div class="row"><span class="label">Day ${d.day}</span><span>${d.title || ''}</span></div>`).join('');
+    const paymentsHtml = (b.payments || []).map(p => `<div class="row"><span class="label">${new Date(p.created_at).toLocaleDateString('en-IN')}</span><span>Rs. ${p.amount} (${p.payment_method})</span></div>`).join('') || '<p class="msg">No payments recorded yet.</p>';
+
+    document.getElementById('detailBody').innerHTML = `
+      <div class="row"><span class="label">Travel Date</span><span>${b.travel_date || '-'}</span></div>
+      <div class="row"><span class="label">Return Date</span><span>${b.return_date || '-'}</span></div>
+      <div class="row"><span class="label">Travellers</span><span>${b.travellers_count || '-'}</span></div>
+      <div class="row"><span class="label">Total</span><span>Rs. ${b.total_amount}</span></div>
+      <div class="row"><span class="label">Paid</span><span>Rs. ${b.advance_paid}</span></div>
+      <div class="row"><span class="label">Balance</span><span>Rs. ${b.balance_due}</span></div>
+      <h2 style="margin-top:18px;">Itinerary</h2>
+      ${itineraryHtml || '<p class="msg">Itinerary will be shared closer to your trip.</p>'}
+      <h2 style="margin-top:18px;">Payment History</h2>
+      ${paymentsHtml}
+      ${b.balance_due > 0 ? `<button style="margin-top:16px;" onclick="payNow('${b.id}')">Pay Balance — Rs. ${b.balance_due}</button>` : ''}
+    `;
+  }
+
+  async function payNow(bookingId) {
+    try {
+      const res = await fetch(`${API_BASE}/api/payments/create-order/${bookingId}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionToken}` },
+        body: JSON.stringify({ amount_type: 'balance' }),
+      });
+      const order = await res.json();
+      if (!res.ok) { alert(order.error); return; }
+
+      const rzp = new Razorpay({
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        order_id: order.order_id,
+        name: 'RJ Holidays',
+        description: 'Trip Payment',
+        handler: function () {
+          // Final confirmation always comes from the server-verified webhook, not this callback —
+          // this just gives the customer immediate feedback while the webhook catches up.
+          alert('Payment received! It may take a moment to reflect — refreshing your booking now.');
+          showDetail(bookingId);
+        },
+        theme: { color: '#0f4c5c' },
+      });
+      rzp.open();
+    } catch (err) {
+      alert('Something went wrong starting the payment. Please try again or contact us on WhatsApp.');
+    }
+  }
+
+  function backToList() {
+    document.getElementById('detailCard').style.display = 'none';
+    document.getElementById('bookingsCard').style.display = 'block';
+  }
+
+  // Handle magic-link verification path: /customer/verify/:token
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  if (pathParts[0] === 'customer' && pathParts[1] === 'verify' && pathParts[2]) {
+    verifyToken(pathParts[2]);
+  } else if (sessionToken) {
+    showBookings();
+  }
+</script>
+</body>
+</html>

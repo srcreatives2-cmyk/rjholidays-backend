@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RJ Holidays — Admin</title>
+<style>
+  :root {
+    --ink: #142b2e; --teal: #0f4c5c; --teal-deep: #0a3540; --gold: #c98a2c;
+    --paper: #f7f4ee; --line: #e2ddd0; --muted: #746c5e; --danger: #a03a26; --ok: #1f6b34;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: 'Helvetica Neue', Arial, sans-serif;
+    background: var(--paper); color: var(--ink);
+  }
+  #loginScreen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  }
+  .login-box {
+    background: #fff; border: 1px solid var(--line); padding: 40px; width: 320px; text-align: center;
+  }
+  .login-box h1 { font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal); margin-bottom: 24px; }
+  .login-box input {
+    width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid var(--line); font-size: 14px;
+  }
+  .login-box button {
+    width: 100%; padding: 11px; background: var(--teal-deep); color: #fff; border: none; cursor: pointer;
+    font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  #errMsg { color: var(--danger); font-size: 12px; margin-top: 8px; min-height: 14px; }
+
+  #app { display: none; min-height: 100vh; }
+  .topbar {
+    background: var(--teal-deep); color: #fff; padding: 14px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .topbar .brand { letter-spacing: 0.1em; text-transform: uppercase; font-size: 13px; color: var(--gold); }
+  .topbar button { background: none; border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+  .tabs { display: flex; gap: 4px; background: #fff; border-bottom: 1px solid var(--line); padding: 0 24px; }
+  .tab {
+    padding: 12px 16px; font-size: 13px; cursor: pointer; color: var(--muted);
+    border-bottom: 2px solid transparent;
+  }
+  .tab.active { color: var(--teal); border-bottom-color: var(--gold); font-weight: 700; }
+  main { padding: 24px; max-width: 1100px; margin: 0 auto; }
+
+  .filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filters input, .filters select {
+    padding: 8px 10px; border: 1px solid var(--line); font-size: 13px;
+  }
+  table { width: 100%; border-collapse: collapse; background: #fff; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  th { color: var(--muted); text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; }
+  tr:hover { background: #fbfaf6; cursor: pointer; }
+  .badge { padding: 3px 8px; border-radius: 2px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .badge.New-Lead, .badge.Contacted { background: #e6eef0; color: var(--teal); }
+  .badge.Quotation-Sent, .badge.Negotiation, .badge.Follow-up { background: #fbeed9; color: #96650f; }
+  .badge.Confirmed, .badge.Completed, .badge.Traveling { background: #e4f2e6; color: var(--ok); }
+  .badge.Lost, .badge.Payment-Pending { background: #f7e4e0; color: var(--danger); }
+
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(10,53,64,0.5); align-items: flex-start; justify-content: center; overflow-y: auto; padding: 40px 16px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: #fff; width: 100%; max-width: 640px; padding: 28px; margin-top: 0; }
+  .modal h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--teal); border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+  .modal-close { float: right; cursor: pointer; color: var(--muted); font-size: 20px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--line); font-size: 13px; font-family: inherit;
+  }
+  .field-row { display: flex; gap: 12px; }
+  .field-row .field { flex: 1; }
+  .btn-primary {
+    background: var(--gold); color: #241a06; border: none; padding: 10px 18px; font-size: 13px;
+    text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; font-weight: 700;
+  }
+  .btn-secondary {
+    background: none; border: 1px solid var(--line); padding: 10px 18px; font-size: 13px; cursor: pointer;
+  }
+  .note-item { background: #fbfaf6; padding: 8px 10px; margin-bottom: 6px; font-size: 12px; border-left: 2px solid var(--gold); }
+  .note-item .ts { color: var(--muted); font-size: 10px; }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .status-select { padding: 4px 6px; font-size: 12px; }
+  .section-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 18px 0 8px; }
+  #configNote {
+    background: #fbeed9; color: #96650f; padding: 10px 14px; font-size: 12px; margin-bottom: 16px; display: none;
+  }
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h1>RJ Holidays — Admin</h1>
+    <input type="email" id="loginEmail" placeholder="Email" />
+    <input type="password" id="loginPassword" placeholder="Password" />
+    <button onclick="doLogin()">Log In</button>
+    <div id="errMsg"></div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="brand">RJ Holidays Admin</div>
+    <button onclick="logout()">Log Out</button>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</div>
+    <div class="tab" data-tab="leads" onclick="switchTab('leads')">Leads</div>
+    <div class="tab" data-tab="quotes" onclick="switchTab('quotes')">Quotes</div>
+    <div class="tab" data-tab="bookings" onclick="switchTab('bookings')">Bookings</div>
+    <div class="tab" data-tab="catalog" onclick="switchTab('catalog')">Packages & Pricing</div>
+    <div class="tab" data-tab="coupons" onclick="switchTab('coupons')">Coupons</div>
+    <div class="tab" data-tab="reviews" onclick="switchTab('reviews')">Reviews</div>
+  </div>
+
+  <main>
+    <div id="configNote"></div>
+
+    <!-- DASHBOARD TAB -->
+    <div id="tab-dashboard">
+      <div id="dashboardMetrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px;"></div>
+      <div class="section-title">Needs Follow-up (Quotes Sent, Nearing Expiry or Stale)</div>
+      <table>
+        <thead><tr><th>Quote Code</th><th>Customer</th><th>Total</th><th>Validity</th><th></th></tr></thead>
+        <tbody id="followUpTableBody"></tbody>
+      </table>
+      <div class="section-title">Source &rarr; Revenue Report</div>
+      <table>
+        <thead><tr><th>Source</th><th>Leads</th><th>Quotes Sent</th><th>Accepted</th><th>Bookings</th><th>Revenue</th></tr></thead>
+        <tbody id="conversionTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- LEADS TAB -->
+    <div id="tab-leads" style="display:none;">
+      <div class="filters">
+        <input type="text" id="searchInput" placeholder="Search name, phone, lead code…" oninput="loadLeads()" />
+        <select id="statusFilter" onchange="loadLeads()">
+          <option value="">All statuses</option>
+        </select>
+        <input type="text" id="destFilter" placeholder="Destination" oninput="loadLeads()" />
+      </div>
+      <table>
+        <thead><tr><th>Lead ID</th><th>Customer</th><th>Destination</th><th>Travel Date</th><th>Status</th><th>Received</th></tr></thead>
+        <tbody id="leadsTableBody"></tbody>
+      </table>
+      <div class="empty-state" id="leadsEmpty" style="display:none;">No leads yet — once your website's enquiry form is connected, they'll appear here automatically.</div>
+    </div>
+
+    <!-- QUOTES TAB -->
+    <div id="tab-quotes" style="display:none;">
+      <table>
+        <thead><tr><th>Quote Code</th><th>Status</th><th>Total</th><th>Advance</th><th>Balance</th><th>Valid Until</th><th></th></tr></thead>
+        <tbody id="quotesTableBody"></tbody>
+      </table>
+      <div class="empty-state" id="quotesEmpty" style="display:none;">No quotes created yet. Open a lead and click "Create Quotation" to make one.</div>
+    </div>
+
+    <!-- CATALOG TAB -->
+    <div id="tab-catalog" style="display:none;">
+      <div class="section-title">Packages</div>
+      <table>
+        <thead><tr><th>Destination</th><th>Name</th><th>Duration</th><th>Base Rate (₹/person)</th></tr></thead>
+        <tbody id="packagesTableBody"></tbody>
+      </table>
+      <button class="btn-secondary" style="margin-top:10px;" onclick="openNewPackage()">+ Add Package</button>
+
+      <div class="section-title">Vehicle Rates</div>
+      <table>
+        <thead><tr><th>Vehicle Type</th><th>Group Size</th><th>Price</th><th>Destination</th></tr></thead>
+        <tbody id="vehiclesTableBody"></tbody>
+      </table>
+      <button class="btn-secondary" style="margin-top:10px;" onclick="openNewVehicleRate()">+ Add Vehicle Rate</button>
+
+      <div class="section-title">Add-ons</div>
+      <table>
+        <thead><tr><th>Name</th><th>Price</th><th>Package-specific?</th></tr></thead>
+        <tbody id="addonsTableBody"></tbody>
+      </table>
+      <button class="btn-secondary" style="margin-top:10px;" onclick="openNewAddon()">+ Add Add-on</button>
+    </div>
+
+    <!-- BOOKINGS TAB -->
+    <div id="tab-bookings" style="display:none;">
+      <table>
+        <thead><tr><th>Booking ID</th><th>Customer</th><th>Travel Date</th><th>Total</th><th>Balance</th><th>Payment</th><th>Status</th></tr></thead>
+        <tbody id="bookingsTableBody"></tbody>
+      </table>
+      <div class="empty-state" id="bookingsEmpty" style="display:none;">No bookings yet. Convert an accepted quote from the Quotes tab.</div>
+    </div>
+
+    <!-- COUPONS TAB -->
+    <div id="tab-coupons" style="display:none;">
+      <table>
+        <thead><tr><th>Code</th><th>Discount</th><th>Scope</th><th>Expiry</th><th>Used</th><th>Active</th></tr></thead>
+        <tbody id="couponsTableBody"></tbody>
+      </table>
+      <button class="btn-secondary" style="margin-top:10px;" onclick="openNewCoupon()">+ Add Coupon</button>
+    </div>
+
+    <!-- REVIEWS TAB -->
+    <div id="tab-reviews" style="display:none;">
+      <table>
+        <thead><tr><th>Customer</th><th>Rating</th><th>Review</th><th>Status</th><th></th></tr></thead>
+        <tbody id="reviewsTableBody"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- LEAD DETAIL MODAL -->
+<div class="modal-backdrop" id="leadModal">
+  <div class="modal">
+    <span class="modal-close" onclick="closeModal('leadModal')">&times;</span>
+    <h2 id="leadModalTitle">Lead</h2>
+    <div id="leadModalBody"></div>
+  </div>
+</div>
+
+<!-- QUOTE BUILDER MODAL -->
+<div class="modal-backdrop" id="quoteModal">
+  <div class="modal" style="max-width: 720px;">
+    <span class="modal-close" onclick="closeModal('quoteModal')">&times;</span>
+    <h2>Create Quotation</h2>
+    <div id="quoteModalBody"></div>
+  </div>
+</div>
+
+<!-- GENERIC SMALL FORM MODAL (packages/vehicles/addons) -->
+<div class="modal-backdrop" id="genericModal">
+  <div class="modal">
+    <span class="modal-close" onclick="closeModal('genericModal')">&times;</span>
+    <h2 id="genericModalTitle">Add</h2>
+    <div id="genericModalBody"></div>
+  </div>
+</div>
+
+<script>
+  // ===== CONFIG =====
+  // Set this to your deployed Render backend URL before publishing this admin panel.
+  const API_BASE = window.RJ_API_BASE || 'https://YOUR-BACKEND.onrender.com';
+  const STATUSES = ['New Lead','Contacted','Requirement Confirmed','Quotation Sent','Follow-up','Negotiation','Payment Pending','Confirmed','Traveling','Completed','Lost'];
+
+  if (API_BASE.includes('YOUR-BACKEND')) {
+    document.getElementById('configNote').style.display = 'block';
+    document.getElementById('configNote').textContent = 'Configuration needed: set RJ_API_BASE to your deployed Render backend URL (see README).';
+  }
+
+  let token = localStorage.getItem('rj_admin_token') || null;
+  let currentLeads = [];
+  let packagesCache = [];
+  let addonsCache = [];
+
+  function authHeaders() {
+    return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Login failed');
+      token = data.token;
+      localStorage.setItem('rj_admin_token', token);
+      showApp();
+    } catch (err) {
+      document.getElementById('errMsg').textContent = err.message;
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem('rj_admin_token');
+    token = null;
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+
+  function showApp() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    const sel = document.getElementById('statusFilter');
+    STATUSES.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s; opt.textContent = s;
+      sel.appendChild(opt);
+    });
+    loadDashboard();
+    loadCatalog();
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    ['dashboard','leads','quotes','bookings','catalog','coupons','reviews'].forEach(t =>
+      document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none'
+    );
+    if (tab === 'dashboard') loadDashboard();
+    if (tab === 'leads') loadLeads();
+    if (tab === 'quotes') loadQuotes();
+    if (tab === 'bookings') loadBookings();
+    if (tab === 'coupons') loadCoupons();
+    if (tab === 'reviews') loadReviews();
+  }
+
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  function badgeClass(status) { return status.replace(/\s+/g, '-'); }
+
+  // ===== LEADS =====
+  async function loadLeads() {
+    const search = document.getElementById('searchInput').value;
+    const status = document.getElementById('statusFilter').value;
+    const destination = document.getElementById('destFilter').value;
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (status) params.set('status', status);
+    if (destination) params.set('destination', destination);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/leads?${params}`, { headers: authHeaders() });
+      if (res.status === 401) return logout();
+      currentLeads = await res.json();
+      renderLeads();
+    } catch (err) { console.error(err); }
+  }
+
+  function renderLeads() {
+    const body = document.getElementById('leadsTableBody');
+    body.innerHTML = '';
+    document.getElementById('leadsEmpty').style.display = currentLeads.length ? 'none' : 'block';
+    currentLeads.forEach(lead => {
+      const tr = document.createElement('tr');
+      tr.onclick = () => openLead(lead.id);
+      tr.innerHTML = `
+        <td>${lead.lead_code}</td>
+        <td>${lead.customers?.name || '-'}<br/><span style="color:#999;font-size:11px;">${lead.customers?.phone || ''}</span></td>
+        <td>${lead.destination}</td>
+        <td>${lead.travel_date || '-'}</td>
+        <td><span class="badge ${badgeClass(lead.status)}">${lead.status}</span></td>
+        <td>${new Date(lead.created_at).toLocaleDateString('en-IN')}</td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+
+  async function openLead(id) {
+    const res = await fetch(`${API_BASE}/api/leads/${id}`, { headers: authHeaders() });
+    const lead = await res.json();
+    document.getElementById('leadModalTitle').textContent = `${lead.lead_code} — ${lead.customers?.name || ''}`;
+
+    const notesHtml = (lead.notes || []).slice().reverse().map(n =>
+      `<div class="note-item"><div class="ts">${new Date(n.created_at).toLocaleString('en-IN')}</div>${n.text}</div>`
+    ).join('') || '<p style="color:#999;font-size:12px;">No notes yet.</p>';
+
+    const historyHtml = (lead.customer_history || []).map(h =>
+      `<div style="font-size:12px;padding:4px 0;">${h.lead_code} — ${h.destination} — <span class="badge ${badgeClass(h.status)}">${h.status}</span></div>`
+    ).join('') || '<p style="color:#999;font-size:12px;">No previous enquiries from this customer.</p>';
+
+    document.getElementById('leadModalBody').innerHTML = `
+      <div class="field-row">
+        <div class="field"><label>Phone</label><input value="${lead.customers?.phone || ''}" readonly /></div>
+        <div class="field"><label>Email</label><input value="${lead.customers?.email || '-'}" readonly /></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Destination</label><input value="${lead.destination}" readonly /></div>
+        <div class="field"><label>Travellers</label><input value="${lead.adults} adults, ${lead.children} children" readonly /></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Travel Date</label><input value="${lead.travel_date || '-'}" readonly /></div>
+        <div class="field"><label>Return Date</label><input value="${lead.return_date || '-'}" readonly /></div>
+      </div>
+      <div class="field"><label>Requirements</label><textarea readonly rows="2">${lead.requirements || '-'}</textarea></div>
+      <div class="field-row">
+        <div class="field">
+          <label>Status</label>
+          <select id="statusSelect_${lead.id}" onchange="updateStatus('${lead.id}', this.value)">
+            ${STATUSES.map(s => `<option value="${s}" ${s === lead.status ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Follow-up Date</label>
+          <input type="date" value="${lead.follow_up_date || ''}" onchange="updateFollowUp('${lead.id}', this.value)" />
+        </div>
+      </div>
+      <div class="section-title">Source</div>
+      <p style="font-size:12px;color:#746c5e;">${lead.lead_source || 'Direct'} ${lead.referrer_url ? '— via ' + lead.referrer_url : ''}</p>
+
+      <div class="section-title">Add Note</div>
+      <div class="field-row">
+        <input type="text" id="newNote_${lead.id}" placeholder="Type a note…" style="flex:1;padding:8px;border:1px solid #e2ddd0;" />
+        <button class="btn-secondary" onclick="addNote('${lead.id}')">Add</button>
+      </div>
+      <div style="margin-top:10px;">${notesHtml}</div>
+
+      <div class="section-title">Customer History</div>
+      ${historyHtml}
+
+      <button class="btn-primary" style="margin-top:18px;" onclick="openQuoteBuilder('${lead.id}', '${lead.customer_id}', '${lead.destination}', '${lead.travel_date || ''}', '${lead.return_date || ''}', ${lead.adults}, ${lead.children})">Create Quotation</button>
+    `;
+    document.getElementById('leadModal').classList.add('open');
+  }
+
+  async function updateStatus(id, status) {
+    await fetch(`${API_BASE}/api/leads/${id}/status`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status }) });
+    loadLeads();
+  }
+  async function updateFollowUp(id, follow_up_date) {
+    await fetch(`${API_BASE}/api/leads/${id}/follow-up`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ follow_up_date }) });
+  }
+  async function addNote(id) {
+    const input = document.getElementById(`newNote_${id}`);
+    if (!input.value.trim()) return;
+    await fetch(`${API_BASE}/api/leads/${id}/notes`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ text: input.value }) });
+    openLead(id);
+  }
+
+  // ===== QUOTE BUILDER =====
+  function openQuoteBuilder(leadId, customerId, destination, travelDate, returnDate, adults, children) {
+    closeModal('leadModal');
+    const pkgOptions = packagesCache
+      .filter(p => p.destination.toLowerCase() === destination.toLowerCase())
+      .map(p => `<option value="${p.id}">${p.name} (₹${p.base_price_double_occupancy}/person)</option>`)
+      .join('') || packagesCache.map(p => `<option value="${p.id}">${p.destination} — ${p.name}</option>`).join('');
+
+    const addonOptions = addonsCache.map(a => `
+      <label style="display:block;font-size:12px;margin-bottom:4px;">
+        <input type="checkbox" value="${a.id}" class="addonCheckbox" /> ${a.name} (₹${a.price})
+      </label>`).join('') || '<p style="color:#999;font-size:12px;">No add-ons configured yet.</p>';
+
+    document.getElementById('quoteModalBody').innerHTML = `
+      <div class="field"><label>Package</label><select id="q_package">${pkgOptions}</select></div>
+      <div class="field-row">
+        <div class="field"><label>Travel Date</label><input type="date" id="q_travelDate" value="${travelDate}" /></div>
+        <div class="field"><label>Return Date</label><input type="date" id="q_returnDate" value="${returnDate}" /></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Adults</label><input type="number" id="q_adults" value="${adults}" min="1" /></div>
+        <div class="field"><label>Children</label><input type="number" id="q_children" value="${children}" min="0" /></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Vehicle Type</label><input type="text" id="q_vehicleType" placeholder="e.g. Innova" /></div>
+        <div class="field"><label>Hotel Category</label><input type="text" id="q_hotelCategory" placeholder="e.g. 4-star" /></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Hotel Category Adjustment (₹)</label><input type="number" id="q_hotelAdj" value="0" /></div>
+        <div class="field"><label>Room Config Adjustment (₹)</label><input type="number" id="q_roomAdj" value="0" /></div>
+      </div>
+      <div class="field"><label>Room Configuration Note</label><input type="text" id="q_roomNote" placeholder="e.g. Triple sharing" /></div>
+      <div class="field"><label>Add-ons</label>${addonOptions}</div>
+      <div class="field"><label>Coupon Code (optional)</label><input type="text" id="q_coupon" /></div>
+      <div class="field"><label>Day-wise Itinerary (one per line: Day | Title | Description)</label><textarea id="q_itinerary" rows="4" placeholder="1 | Arrival | Airport pickup, check-in&#10;2 | Sightseeing | Local tour"></textarea></div>
+      <div class="field"><label>Inclusions</label><textarea id="q_inclusions" rows="2"></textarea></div>
+      <div class="field"><label>Exclusions</label><textarea id="q_exclusions" rows="2"></textarea></div>
+      <div class="field"><label>Cancellation Policy</label><textarea id="q_cancellation" rows="2"></textarea></div>
+      <div class="field"><label>Terms & Conditions</label><textarea id="q_terms" rows="2"></textarea></div>
+      <div class="field-row">
+        <div class="field"><label>Validity Date</label><input type="date" id="q_validity" /></div>
+        <div class="field"><label>Advance Amount (₹) — you decide, case by case</label><input type="number" id="q_advance" value="0" /></div>
+      </div>
+      <button class="btn-primary" onclick="submitQuote('${leadId}')">Generate Quote</button>
+      <div id="quoteResult" style="margin-top:12px;font-size:13px;"></div>
+    `;
+    document.getElementById('quoteModal').classList.add('open');
+  }
+
+  async function submitQuote(leadId) {
+    const itineraryLines = document.getElementById('q_itinerary').value.split('\n').filter(Boolean);
+    const itinerary = itineraryLines.map(line => {
+      const [day, title, description] = line.split('|').map(s => s?.trim());
+      return { day: Number(day) || 1, title, description };
+    });
+    const addonIds = Array.from(document.querySelectorAll('.addonCheckbox:checked')).map(c => c.value);
+
+    const payload = {
+      lead_id: leadId,
+      package_id: document.getElementById('q_package').value,
+      travel_date: document.getElementById('q_travelDate').value,
+      return_date: document.getElementById('q_returnDate').value,
+      adults: Number(document.getElementById('q_adults').value),
+      children: Number(document.getElementById('q_children').value),
+      vehicle_type: document.getElementById('q_vehicleType').value,
+      hotel_category: document.getElementById('q_hotelCategory').value,
+      hotel_adjustment: Number(document.getElementById('q_hotelAdj').value),
+      room_config_note: document.getElementById('q_roomNote').value,
+      room_config_adjustment: Number(document.getElementById('q_roomAdj').value),
+      addon_ids: addonIds,
+      coupon_code: document.getElementById('q_coupon').value || null,
+      itinerary,
+      inclusions: document.getElementById('q_inclusions').value,
+      exclusions: document.getElementById('q_exclusions').value,
+      cancellation_policy: document.getElementById('q_cancellation').value,
+      terms_and_conditions: document.getElementById('q_terms').value,
+      validity_date: document.getElementById('q_validity').value,
+      advance_amount: Number(document.getElementById('q_advance').value),
+    };
+
+    const res = await fetch(`${API_BASE}/api/quotes`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+    const quote = await res.json();
+    if (!res.ok) {
+      document.getElementById('quoteResult').innerHTML = `<span style="color:#a03a26;">${quote.error}</span>`;
+      return;
+    }
+    document.getElementById('quoteResult').innerHTML = `
+      <p><strong>Quote created:</strong> ${quote.quote_code} — Total: ₹${quote.total_amount}</p>
+      <button class="btn-primary" onclick="sendQuote('${quote.id}')">Send to Customer via Email</button>
+    `;
+  }
+
+  async function sendQuote(quoteId) {
+    const res = await fetch(`${API_BASE}/api/quotes/${quoteId}/send`, { method: 'POST', headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error); return; }
+    alert('Quote sent! View link: ' + data.view_url);
+    closeModal('quoteModal');
+    loadLeads();
+  }
+
+  // ===== QUOTES TAB =====
+  async function loadQuotes() {
+    const res = await fetch(`${API_BASE}/api/quotes`, { headers: authHeaders() });
+    const quotes = await res.json();
+    const body = document.getElementById('quotesTableBody');
+    body.innerHTML = '';
+    document.getElementById('quotesEmpty').style.display = quotes.length ? 'none' : 'block';
+    quotes.forEach(q => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${q.quote_code}</td>
+        <td><span class="badge ${badgeClass(q.status)}">${q.status}</span></td>
+        <td>₹${q.total_amount}</td>
+        <td>₹${q.advance_amount}</td>
+        <td>₹${q.balance_amount}</td>
+        <td>${q.validity_date || '-'}</td>
+        <td>
+          <a href="${API_BASE}/api/quotes/${q.id}/pdf" target="_blank" style="font-size:12px;margin-right:8px;">PDF</a>
+          ${q.status === 'Accepted' ? `<a href="#" onclick="event.preventDefault();convertToBooking('${q.id}')" style="font-size:12px;">Convert to Booking</a>` : ''}
+        </td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+
+  async function convertToBooking(quoteId) {
+    const res = await fetch(`${API_BASE}/api/bookings/from-quote/${quoteId}`, { method: 'POST', headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error); return; }
+    alert(`Booking created: ${data.booking_code}`);
+    switchTab('bookings');
+  }
+
+  // ===== CATALOG TAB =====
+  async function loadCatalog() {
+    const [pkgRes, vehRes, addonRes] = await Promise.all([
+      fetch(`${API_BASE}/api/catalog/packages`, { headers: authHeaders() }),
+      fetch(`${API_BASE}/api/catalog/vehicle-rates`, { headers: authHeaders() }),
+      fetch(`${API_BASE}/api/catalog/addons`, { headers: authHeaders() }),
+    ]);
+    packagesCache = await pkgRes.json();
+    const vehicles = await vehRes.json();
+    addonsCache = await addonRes.json();
+
+    document.getElementById('packagesTableBody').innerHTML = packagesCache.map(p =>
+      `<tr><td>${p.destination}</td><td>${p.name}</td><td>${p.duration_days}D/${p.duration_nights}N</td><td>₹${p.base_price_double_occupancy}</td></tr>`
+    ).join('') || '<tr><td colspan="4" style="color:#999;">No packages yet.</td></tr>';
+
+    document.getElementById('vehiclesTableBody').innerHTML = vehicles.map(v =>
+      `<tr><td>${v.vehicle_type}</td><td>${v.min_group_size}-${v.max_group_size}</td><td>₹${v.price}</td><td>${v.destination || 'All'}</td></tr>`
+    ).join('') || '<tr><td colspan="4" style="color:#999;">No vehicle rates yet.</td></tr>';
+
+    document.getElementById('addonsTableBody').innerHTML = addonsCache.map(a =>
+      `<tr><td>${a.name}</td><td>₹${a.price}</td><td>${a.package_id ? 'Yes' : 'Universal'}</td></tr>`
+    ).join('') || '<tr><td colspan="3" style="color:#999;">No add-ons yet.</td></tr>';
+  }
+
+  function openNewPackage() {
+    document.getElementById('genericModalTitle').textContent = 'Add Package';
+    document.getElementById('genericModalBody').innerHTML = `
+      <div class="field"><label>Destination</label><input id="np_destination" /></div>
+      <div class="field"><label>Package Name</label><input id="np_name" /></div>
+      <div class="field-row">
+        <div class="field"><label>Nights</label><input type="number" id="np_nights" /></div>
+        <div class="field"><label>Days</label><input type="number" id="np_days" /></div>
+      </div>
+      <div class="field"><label>Base Rate — per person, double occupancy (₹)</label><input type="number" id="np_price" /></div>
+      <button class="btn-primary" onclick="saveNewPackage()">Save</button>
+    `;
+    document.getElementById('genericModal').classList.add('open');
+  }
+  async function saveNewPackage() {
+    const payload = {
+      destination: document.getElementById('np_destination').value,
+      name: document.getElementById('np_name').value,
+      duration_nights: Number(document.getElementById('np_nights').value),
+      duration_days: Number(document.getElementById('np_days').value),
+      base_price_double_occupancy: Number(document.getElementById('np_price').value),
+    };
+    await fetch(`${API_BASE}/api/catalog/packages`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+    closeModal('genericModal');
+    loadCatalog();
+  }
+
+  function openNewVehicleRate() {
+    document.getElementById('genericModalTitle').textContent = 'Add Vehicle Rate';
+    document.getElementById('genericModalBody').innerHTML = `
+      <div class="field"><label>Vehicle Type</label><input id="nv_type" placeholder="e.g. Innova" /></div>
+      <div class="field-row">
+        <div class="field"><label>Min Group Size</label><input type="number" id="nv_min" /></div>
+        <div class="field"><label>Max Group Size</label><input type="number" id="nv_max" /></div>
+      </div>
+      <div class="field"><label>Price (₹)</label><input type="number" id="nv_price" /></div>
+      <div class="field"><label>Destination (leave blank for all)</label><input id="nv_dest" /></div>
+      <button class="btn-primary" onclick="saveNewVehicleRate()">Save</button>
+    `;
+    document.getElementById('genericModal').classList.add('open');
+  }
+  async function saveNewVehicleRate() {
+    const payload = {
+      vehicle_type: document.getElementById('nv_type').value,
+      min_group_size: Number(document.getElementById('nv_min').value),
+      max_group_size: Number(document.getElementById('nv_max').value),
+      price: Number(document.getElementById('nv_price').value),
+      destination: document.getElementById('nv_dest').value || null,
+    };
+    await fetch(`${API_BASE}/api/catalog/vehicle-rates`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+    closeModal('genericModal');
+    loadCatalog();
+  }
+
+  function openNewAddon() {
+    document.getElementById('genericModalTitle').textContent = 'Add Add-on';
+    document.getElementById('genericModalBody').innerHTML = `
+      <div class="field"><label>Name</label><input id="na_name" /></div>
+      <div class="field"><label>Price (₹)</label><input type="number" id="na_price" /></div>
+      <div class="field"><label>Description</label><textarea id="na_desc" rows="2"></textarea></div>
+      <button class="btn-primary" onclick="saveNewAddon()">Save</button>
+    `;
+    document.getElementById('genericModal').classList.add('open');
+  }
+  async function saveNewAddon() {
+    const payload = {
+      name: document.getElementById('na_name').value,
+      price: Number(document.getElementById('na_price').value),
+      description: document.getElementById('na_desc').value,
+    };
+    await fetch(`${API_BASE}/api/catalog/addons`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+    closeModal('genericModal');
+    loadCatalog();
+  }
+
+  // ===== DASHBOARD =====
+  async function loadDashboard() {
+    try {
+      const [summaryRes, followUpRes, conversionRes] = await Promise.all([
+        fetch(`${API_BASE}/api/dashboard/summary`, { headers: authHeaders() }),
+        fetch(`${API_BASE}/api/insights/needs-follow-up`, { headers: authHeaders() }),
+        fetch(`${API_BASE}/api/insights/conversion-report`, { headers: authHeaders() }),
+      ]);
+      if (summaryRes.status === 401) return logout();
+      const summary = await summaryRes.json();
+      const followUps = await followUpRes.json();
+      const conversion = await conversionRes.json();
+
+      const metrics = [
+        ['Total Leads', summary.total_leads],
+        ['New Leads (7d)', summary.new_leads_7d],
+        ['Pending Quotes', summary.pending_quotes],
+        ['Confirmed Bookings', summary.confirmed_bookings],
+        ['Pending Payments', summary.pending_payment_bookings],
+        ['Upcoming Trips (30d)', (summary.upcoming_trips_30d || []).length],
+        ['Revenue (Month)', '₹' + summary.revenue_this_month],
+        ['Revenue (All-time)', '₹' + summary.revenue_all_time],
+        ['Conversion Rate', summary.conversion_rate_pct + '%'],
+      ];
+      document.getElementById('dashboardMetrics').innerHTML = metrics.map(([label, val]) => `
+        <div style="background:#fff;border:1px solid #e2ddd0;padding:16px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:#0f4c5c;">${val}</div>
+          <div style="font-size:11px;color:#746c5e;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px;">${label}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('followUpTableBody').innerHTML = followUps.map(q => `
+        <tr>
+          <td>${q.quote_code}</td>
+          <td>${q.customers?.name || '-'}</td>
+          <td>₹${q.total_amount}</td>
+          <td>${q.validity_date || '-'}</td>
+          <td><a href="#" onclick="event.preventDefault();sendWaLink('quoteReminder','quoteId','${q.id}')" style="font-size:12px;">Send WhatsApp Reminder</a></td>
+        </tr>
+      `).join('') || '<tr><td colspan="5" style="color:#999;">Nothing needs follow-up right now.</td></tr>';
+
+      document.getElementById('conversionTableBody').innerHTML = Object.entries(conversion).map(([source, d]) => `
+        <tr><td>${source}</td><td>${d.leads}</td><td>${d.quotes_sent}</td><td>${d.quotes_accepted}</td><td>${d.bookings}</td><td>₹${d.revenue}</td></tr>
+      `).join('') || '<tr><td colspan="6" style="color:#999;">No data yet.</td></tr>';
+    } catch (err) { console.error(err); }
+  }
+
+  async function sendWaLink(type, idParam, idValue) {
+    const params = new URLSearchParams({ type, [idParam]: idValue });
+    const res = await fetch(`${API_BASE}/api/whatsapp/link?${params}`, { headers: authHeaders() });
+    const data = await res.json();
+    if (data.link) window.open(data.link, '_blank');
+    else alert(data.error || 'Could not generate link');
+  }
+
+  // ===== BOOKINGS =====
+  async function loadBookings() {
+    const res = await fetch(`${API_BASE}/api/bookings`, { headers: authHeaders() });
+    const bookings = await res.json();
+    const body = document.getElementById('bookingsTableBody');
+    document.getElementById('bookingsEmpty').style.display = bookings.length ? 'none' : 'block';
+    body.innerHTML = bookings.map(b => `
+      <tr onclick="openBooking('${b.id}')" style="cursor:pointer;">
+        <td>${b.booking_code}</td>
+        <td>${b.customers?.name || '-'}</td>
+        <td>${b.travel_date || '-'}</td>
+        <td>₹${b.total_amount}</td>
+        <td>₹${b.balance_due}</td>
+        <td><span class="badge ${badgeClass(b.payment_status)}">${b.payment_status}</span></td>
+        <td><span class="badge ${badgeClass(b.booking_status)}">${b.booking_status}</span></td>
+      </tr>
+    `).join('');
+  }
+
+  async function openBooking(id) {
+    const res = await fetch(`${API_BASE}/api/bookings/${id}`, { headers: authHeaders() });
+    const b = await res.json();
+    document.getElementById('leadModalTitle').textContent = `${b.booking_code} — ${b.customers?.name || ''}`;
+
+    const paymentsHtml = (b.payments || []).map(p => `<div class="row"><span class="label">${new Date(p.created_at).toLocaleDateString('en-IN')} — ${p.payment_method}</span><span class="value">₹${p.amount}</span></div>`).join('') || '<p style="color:#999;font-size:12px;">No payments yet.</p>';
+
+    document.getElementById('leadModalBody').innerHTML = `
+      <div class="field-row">
+        <div class="field"><label>Total</label><input value="₹${b.total_amount}" readonly /></div>
+        <div class="field"><label>Balance Due</label><input value="₹${b.balance_due}" readonly /></div>
+      </div>
+      <div class="section-title">Payment History</div>
+      ${paymentsHtml}
+      <div class="section-title">Record Manual Payment (bank transfer / cash / UPI)</div>
+      <div class="field-row">
+        <div class="field"><input type="number" id="mp_amount" placeholder="Amount (₹)" /></div>
+        <div class="field">
+          <select id="mp_method">
+            <option value="manual_bank_transfer">Bank Transfer</option>
+            <option value="manual_cash">Cash</option>
+            <option value="manual_upi">UPI</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><input type="text" id="mp_note" placeholder="Reference note (optional)" /></div>
+      <button class="btn-primary" onclick="markPaid('${b.id}')">Mark as Paid</button>
+
+      <div class="section-title">Vendor / Voucher Details</div>
+      <div class="field-row">
+        <div class="field"><input type="text" id="vd_hotel" placeholder="Hotel Name" value="${b.vendor_details?.hotel_name || ''}" /></div>
+        <div class="field"><input type="text" id="vd_hotelConf" placeholder="Hotel Confirmation #" value="${b.vendor_details?.hotel_confirmation_number || ''}" /></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><input type="text" id="vd_driver" placeholder="Driver Name" value="${b.vendor_details?.driver_name || ''}" /></div>
+        <div class="field"><input type="text" id="vd_driverContact" placeholder="Driver Contact" value="${b.vendor_details?.driver_contact || ''}" /></div>
+      </div>
+      <button class="btn-secondary" onclick="saveVendorDetails('${b.id}')">Save Vendor Details</button>
+
+      <div class="section-title">Documents & Actions</div>
+      <a class="btn-secondary" style="display:inline-block;text-decoration:none;margin:4px 6px 4px 0;" href="${API_BASE}/api/documents/invoice/${b.id}" target="_blank">Invoice</a>
+      <a class="btn-secondary" style="display:inline-block;text-decoration:none;margin:4px 6px 4px 0;" href="${API_BASE}/api/documents/voucher/${b.id}/hotel" target="_blank">Hotel Voucher</a>
+      <a class="btn-secondary" style="display:inline-block;text-decoration:none;margin:4px 6px 4px 0;" href="${API_BASE}/api/documents/voucher/${b.id}/cab" target="_blank">Cab Voucher</a>
+      <a class="btn-secondary" style="display:inline-block;text-decoration:none;margin:4px 6px 4px 0;" href="${API_BASE}/api/documents/booking-confirmation/${b.id}" target="_blank">Confirmation</a>
+      <button class="btn-secondary" onclick="sendWaLink('paymentPending','bookingId','${b.id}')">WhatsApp Payment Reminder</button>
+      <button class="btn-secondary" onclick="sendWaLink('postTrip','bookingId','${b.id}')">WhatsApp Post-Trip</button>
+      <button class="btn-secondary" onclick="requestReview('${b.id}')">Request Review</button>
+    `;
+    document.getElementById('leadModal').classList.add('open');
+  }
+
+  async function markPaid(bookingId) {
+    const amount = Number(document.getElementById('mp_amount').value);
+    const payment_method = document.getElementById('mp_method').value;
+    const reference_note = document.getElementById('mp_note').value;
+    if (!amount) { alert('Enter an amount'); return; }
+    const res = await fetch(`${API_BASE}/api/bookings/${bookingId}/mark-paid`, {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify({ amount, payment_method, reference_note }),
+    });
+    if (!res.ok) { const d = await res.json(); alert(d.error); return; }
+    openBooking(bookingId);
+    loadBookings();
+  }
+
+  async function saveVendorDetails(bookingId) {
+    const payload = {
+      hotel_name: document.getElementById('vd_hotel').value,
+      hotel_confirmation_number: document.getElementById('vd_hotelConf').value,
+      driver_name: document.getElementById('vd_driver').value,
+      driver_contact: document.getElementById('vd_driverContact').value,
+    };
+    await fetch(`${API_BASE}/api/bookings/${bookingId}/vendor-details`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(payload) });
+    alert('Vendor details saved.');
+  }
+
+  async function requestReview(bookingId) {
+    await fetch(`${API_BASE}/api/reviews/request/${bookingId}`, { method: 'POST', headers: authHeaders() });
+    sendWaLink('reviewRequest', 'bookingId', bookingId);
+  }
+
+  // ===== COUPONS =====
+  async function loadCoupons() {
+    const res = await fetch(`${API_BASE}/api/coupons`, { headers: authHeaders() });
+    const coupons = await res.json();
+    document.getElementById('couponsTableBody').innerHTML = coupons.map(c => `
+      <tr>
+        <td>${c.code}</td>
+        <td>${c.discount_type === 'percent' ? c.discount_value + '%' : '₹' + c.discount_value}</td>
+        <td>${c.destination || 'All'} ${c.package_id ? '/ specific package' : ''}</td>
+        <td>${c.expiry_date || '-'}</td>
+        <td>${c.times_used || 0}${c.usage_limit ? ' / ' + c.usage_limit : ''}</td>
+        <td>${c.is_active ? 'Yes' : 'No'}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" style="color:#999;">No coupons yet.</td></tr>';
+  }
+
+  function openNewCoupon() {
+    document.getElementById('genericModalTitle').textContent = 'Add Coupon';
+    document.getElementById('genericModalBody').innerHTML = `
+      <div class="field"><label>Code</label><input id="nc_code" placeholder="e.g. WELCOME500" /></div>
+      <div class="field-row">
+        <div class="field"><label>Discount Type</label>
+          <select id="nc_type"><option value="fixed">Fixed (₹)</option><option value="percent">Percent (%)</option></select>
+        </div>
+        <div class="field"><label>Discount Value</label><input type="number" id="nc_value" /></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Destination (optional)</label><input id="nc_dest" /></div>
+        <div class="field"><label>Min Booking Value (₹)</label><input type="number" id="nc_min" value="0" /></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Expiry Date</label><input type="date" id="nc_expiry" /></div>
+        <div class="field"><label>Usage Limit</label><input type="number" id="nc_limit" placeholder="Leave blank for unlimited" /></div>
+      </div>
+      <button class="btn-primary" onclick="saveNewCoupon()">Save</button>
+    `;
+    document.getElementById('genericModal').classList.add('open');
+  }
+  async function saveNewCoupon() {
+    const payload = {
+      code: document.getElementById('nc_code').value,
+      discount_type: document.getElementById('nc_type').value,
+      discount_value: Number(document.getElementById('nc_value').value),
+      destination: document.getElementById('nc_dest').value || null,
+      min_booking_value: Number(document.getElementById('nc_min').value) || 0,
+      expiry_date: document.getElementById('nc_expiry').value || null,
+      usage_limit: document.getElementById('nc_limit').value ? Number(document.getElementById('nc_limit').value) : null,
+    };
+    await fetch(`${API_BASE}/api/coupons`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+    closeModal('genericModal');
+    loadCoupons();
+  }
+
+  // ===== REVIEWS =====
+  async function loadReviews() {
+    const res = await fetch(`${API_BASE}/api/reviews`, { headers: authHeaders() });
+    const reviews = await res.json();
+    document.getElementById('reviewsTableBody').innerHTML = reviews.map(r => `
+      <tr>
+        <td>${r.customers?.name || '-'}</td>
+        <td>${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</td>
+        <td style="max-width:300px;">${r.review_text || '-'}</td>
+        <td><span class="badge ${badgeClass(r.status)}">${r.status}</span></td>
+        <td>
+          ${r.status !== 'approved' ? `<a href="#" onclick="event.preventDefault();setReviewStatus('${r.id}','approved')" style="font-size:12px;margin-right:8px;">Approve</a>` : ''}
+          ${r.status !== 'hidden' ? `<a href="#" onclick="event.preventDefault();setReviewStatus('${r.id}','hidden')" style="font-size:12px;">Hide</a>` : ''}
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="5" style="color:#999;">No reviews yet.</td></tr>';
+  }
+  async function setReviewStatus(id, status) {
+    await fetch(`${API_BASE}/api/reviews/${id}/status`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status }) });
+    loadReviews();
+  }
+
+  // Auto-login if token already saved
+  if (token) showApp();
+</script>
+</body>
+</html>
